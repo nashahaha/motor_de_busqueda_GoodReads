@@ -1,0 +1,15 @@
+Limpieza sobre muestra — spark-submit limpiar.py .../sample_books .../clean_sample [.../clean_sample_json]
+Fecha: 2026-11-14 (cluster-01, screen)
+
+FILAS INICIALES: 5000
+DESCARTADAS (sin Name): 0
+ID DUPLICADOS (grupos): 0
+FILAS FINALES: 5000
+DESCRIPCIONES VACÍAS/NULAS: 949 (18.98%)
+TOP 10 IDIOMAS: unknown 4368, eng 439, ger 61, fre 37, en-us 36, spa 21, en-gb 17, jpn 10, ita 3, ind 1
+JSONL escrito en hdfs:///uhadoop2026/grupo8/clean_sample_json
+
+Notas:
+- Códigos de idioma en formato corto ISO 639-2/B (eng, ger, fre, spa, jpn, ind, ita) y en-us/en-gb.
+- "unknown" domina (~87% de la muestra): el placeholder "null" del dataset se normalizó.
+- Parquet clean_sample y clean_sample_json (JSONL vía df.write.json) generados sin error.

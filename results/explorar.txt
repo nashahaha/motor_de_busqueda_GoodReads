@@ -1,0 +1,36 @@
+Exploración de book*.csv en /uhadoop2026/grupo8/ — spark-submit explorar.py
+Fecha: 2026-11-14 (cluster-01, warnings Hadoop ignorados)
+Nota: este archivo es un RESUMEN legible de la salida real de explorar.py; el dato maestro es la ejecución en el clúster.
+
+SIN Description (excluir, 18 columnas):
+book1-100k.csv     - 18 columnas (sin Description)
+book100k-200k.csv  - 18 columnas (sin Description)
+book200k-300k.csv  - 18 columnas (sin Description)
+book300k-400k.csv  - 18 columnas (sin Description)
+book400k-500k.csv  - 18 columnas (sin Description)
+book500k-600k.csv  - 18 columnas (sin Description)
+
+COM Description (17 archivos):
+book600k-700k.csv  - 19 columnas (pagesNumber minúscula)
+book700k-800k.csv  - 20 columnas (+Count of text reviews)
+book800k-900k.csv  - 20 columnas (+Count of text reviews)
+book900k-1000k.csv - 20 columnas (+Count of text reviews)
+book1000k-1100k.csv- 20 columnas (+Count of text reviews)
+book1100k-1200k.csv- 20 columnas (+Count of text reviews)
+book1200k-1300k.csv- 20 columnas (+Count of text reviews)
+book1300k-1400k.csv- 20 columnas (+Count of text reviews)
+book1400k-1500k.csv- 20 columnas (+Count of text reviews)
+book1500k-1600k.csv- 20 columnas (+Count of text reviews)
+book1600k-1700k.csv- 20 columnas (+Count of text reviews)
+book1700k-1800k.csv- 19 columnas (incluye "Description", "pagesNumber" minúscula)
+book1800k-1900k.csv- 19 columnas ("PagesNumber" mayúscula)
+book1900k-2000k.csv- 19 columnas ("PagesNumber" mayúscula)
+book2000k-3000k.csv- 19 columnas ("PagesNumber" mayúscula)
+book3000k-4000k.csv- 19 columnas ("PagesNumber" mayúscula)
+book4000k-5000k.csv- 19 columnas ("PagesNumber" mayúscula)
+
+Notas:
+- "Count of text reviews" (columna extra en los 10 archivos de 20 columnas) se descarta en unir.py.
+- pagesNumber/PagesNumber se normalizan vía mapa case-insensitive en unir.py.
+- Orden de RatingDist* varía entre archivos (5..1 vs 1..5); unir.py alinea por nombre.
+- user_rating_*.csv: no listados por patrón estricto book*.csv.

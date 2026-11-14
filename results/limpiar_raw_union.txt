@@ -1,0 +1,16 @@
+Limpieza completa (re-corrida) — spark-submit --master spark://cluster-01:7077 limpiar.py .../raw_union .../clean_books [.../clean_books_json]
+Fecha: 2026-11-14 (cluster-01, screen)
+
+FILAS INICIALES: 1512190
+DESCARTADAS (sin Name): 0
+ID DUPLICADOS (grupos): 0
+FILAS FINALES: 1512190
+DESCRIPCIONES VACÍAS/NULAS: 341080 (22.56%)
+TOP 10 IDIOMAS: unknown 1337666, eng 120368, fre 14215, en-us 12284, ger 10356, en-gb 5667, spa 5379, jpn 1913, ita 1004, por 341
+JSONL escrito en hdfs:///uhadoop2026/grupo8/clean_books_json
+
+Notas:
+- unknown 1337666 = 1.337.666 NULLs reales del dataset mapeados a "unknown" (corrección del
+  defecto de la corrida 03:20, que los mostraba como null).
+- clean_books (parquet) y clean_books_json (JSONL) generados en HDFS.
+- Corrida anterior fallida (03:49): OOM en caché; sin persist en esta versión.

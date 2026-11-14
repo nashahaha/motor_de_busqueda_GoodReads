@@ -1,0 +1,40 @@
+Inventario HDFS — /uhadoop2026/grupo8/
+Fecha: 2026-11-14 (vía sesión SSH del grupo, cluster-01)
+Warnings de Hadoop ignorados (java reflective access / NativeCodeLoader).
+
+Archivos de libros (23): los 6 primeros NO tienen columna Description
+(book1-100k … book500k-600k) y los 17 desde book600k-700k.csv en adelante SÍ la tienen.
+Total utilizable aprox.: 1.06 GB (suma de tamaños de los 17).
+
+book*.csv (tamaños -h):
+  book1-100k.csv          8.5 M   (sin Description — excluir)
+  book100k-200k.csv       8.4 M   (sin Description — excluir)
+  book200k-300k.csv       8.3 M   (sin Description — excluir)
+  book300k-400k.csv       8.3 M   (sin Description — excluir)
+  book400k-500k.csv       8.1 M   (sin Description — excluir)
+  book500k-600k.csv       8.0 M   (sin Description — excluir)
+  book600k-700k.csv      42.9 M
+  book700k-800k.csv      41.9 M
+  book800k-900k.csv      40.6 M
+  book900k-1000k.csv     33.7 M
+  book1000k-1100k.csv    32.5 M
+  book1100k-1200k.csv    33.5 M
+  book1200k-1300k.csv    34.2 M
+  book1300k-1400k.csv    29.3 M
+  book1400k-1500k.csv    26.8 M
+  book1500k-1600k.csv    25.6 M
+  book1600k-1700k.csv    24.8 M
+  book1700k-1800k.csv    24.1 M
+  book1800k-1900k.csv    28.4 M
+  book1900k-2000k.csv    31.3 M
+  book2000k-3000k.csv   275.2 M
+  book3000k-4000k.csv   165.4 M
+  book4000k-5000k.csv   171.1 M
+
+Otros:
+  raw_union/            646.3 M  (parquet generado por unir.py; conteo no verificado aún)
+  user_rating_*.csv     2.6, 2.1, 1.5, 2.3, 2.4, 772.0 K, 6.2 M  (no se usan)
+
+Notas:
+- Patrón de lectura estricto: book*.csv únicamente.
+- raw_union existe en HDFS y pesa 646.3 M (salida de unir.py previa; no verificada aún por el grupo).

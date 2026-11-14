@@ -1,0 +1,21 @@
+Muestra de desarrollo + conteo — spark-submit muestra.py 5000
+Fecha: 2026-11-14 (cluster-01)
+
+TOTAL raw_union: 1.512.190 filas (17 archivos book*.csv con Description)
+Muestra: hdfs:///uhadoop2026/grupo8/sample_books (5.000 filas, order por limit() determinista)
+
+Formato real observado (primeras filas):
+Id            = "2000004" (cadena numérica)
+ISBN          = cadena de dígitos ("3170117742")
+Rating        = decimal ("3.66", "0.0", "3.0")
+PublishYear   = entero ("1998")
+RatingDist1..5= "<bucket>:<conteo>" → "1:0", "2:3", "3:25", "4:24", "5:10"
+RatingDistTotal = "total:62"   (sumando: 3+25+24+10 = 62 ✓)
+CountsOfReview = entero ("0")
+Language      = cadena, frecuentemente "null" (placeholder de faltante)
+Description   = texto libre multiidioma (alemán, francés, inglés...); puede contener saltos de línea
+
+Implicancias:
+- parse_rating_dist debe tomar la parte tras ":" (corregido en limpiar.py).
+- "null" literal ES el placeholder de dato faltante (normalizar_idioma lo trata vía VACIO).
+- JSONL como export para ES: df.write.json ya escapa newlines en strings.

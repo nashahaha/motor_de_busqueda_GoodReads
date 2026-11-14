@@ -1,6 +1,7 @@
 # Script de unión de los archivos que sirven
 # Se ejecuta con spark-submit unir.py 2>/dev/null
 
+import re
 import subprocess
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
@@ -14,9 +15,9 @@ CANON = ["Id", "Name", "Authors", "ISBN", "Rating", "PublishYear", "PublishMonth
          "Language", "pagesNumber", "Description"]
 LOWER = {c.lower(): c for c in CANON}
 
+BOOK = re.compile(r"/book[^/]*\.csv$")   # solo book*.csv, nunca user_rating_*.csv
 out = subprocess.check_output(["hdfs", "dfs", "-ls", "/uhadoop2026/grupo8/"]).decode()
-files = sorted(l.split()[-1] for l in out.splitlines()
-               if "/book" in l and l.endswith(".csv"))
+files = sorted(l.split()[-1] for l in out.splitlines() if BOOK.search(l.split()[-1]))
 
 union = None
 for f in files:
