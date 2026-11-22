@@ -1,12 +1,12 @@
 # =============================================================================
 # 02_limpiar.py — Limpieza y normalización con Apache Spark
 # Lee raw_union, limpia campos, deduplica, crea searchable_text.
-# Ejecutar:  spark-submit 02_limpiar.py 2>/dev/null
+# Ejecutar:  spark-submit --master spark://cluster-01:7077 02_limpiar.py
 # =============================================================================
 
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, Window
 from pyspark.sql import functions as F
-from pyspark.sql.types import IntegerType, FloatType
+from pyspark.sql.types import IntegerType, FloatType, LongType
 
 spark = SparkSession.builder.appName("grupo8_limpiar").getOrCreate()
 spark.sparkContext.setLogLevel("ERROR")
@@ -22,9 +22,10 @@ print(f"Filas leídas de raw_union: {df.count()}")
 # =============================================================================
 for rc in ["RatingDist1", "RatingDist2", "RatingDist3",
            "RatingDist4", "RatingDist5", "RatingDistTotal"]:
+    # CAMBIO: admite tanto "5:891037" como "891037"; long evita overflow de conteos.
     df = df.withColumn(
         rc,
-        F.split(F.col(rc), ":").getItem(1).cast(IntegerType())
+        F.regexp_extract(F.col(rc), r"^\s*(?:[^:]*:)?\s*(\d+)\s*$", 1).cast(LongType())
     )
 
 # =============================================================================
@@ -44,6 +45,9 @@ df = (df
 # =============================================================================
 for tc in ["Name", "Authors", "Publisher", "Description"]:
     df = df.withColumn(tc, F.trim(F.regexp_replace(F.col(tc), r"\s+", " ")))
+
+# CAMBIO: term/keyword en Elasticsearch distingue mayúsculas; normalizar Language.
+df = df.withColumn("Language", F.lower(F.trim(F.col("Language"))))
 
 # =============================================================================
 # 4. Filtros básicos de calidad
@@ -69,10 +73,27 @@ despues_filtro = df.count()
 print(f"Filas eliminadas por filtros de calidad: {antes - despues_filtro}")
 
 # =============================================================================
-# 5. Deduplicar por Id (mantiene primera ocurrencia)
+# 5. Deduplicar por Id (prioriza registros con descripción más completa)
 # =============================================================================
 antes_dedup = df.count()
-df = df.dropDuplicates(["Id"])
+# CAMBIO: dropDuplicates(["Id"]) colapsa todos los Id nulos y conserva una fila arbitraria.
+# Crear un identificador estable para esos casos y seleccionar la versión mejor documentada.
+df = df.withColumn(
+    "Id",
+    F.when(
+        F.col("Id").isNull() | (F.length(F.trim(F.col("Id"))) == 0),
+        F.concat(F.lit("sin-id-"), F.sha2(F.to_json(F.struct(*df.columns)), 256))
+    ).otherwise(F.trim(F.col("Id")))
+)
+# CAMBIO: la ventana favorece sinopsis extensas y, ante empates, más reseñas.
+orden = Window.partitionBy("Id").orderBy(
+    F.desc(F.length(F.coalesce(F.col("Description"), F.lit("")))),
+    F.desc(F.coalesce(F.col("CountsOfReview"), F.lit(-1))),
+    F.desc(F.coalesce(F.col("RatingDistTotal"), F.lit(-1))),
+    F.asc(F.coalesce(F.col("Name"), F.lit(""))),
+    F.asc(F.coalesce(F.col("Authors"), F.lit("")))
+)
+df = df.withColumn("_rn", F.row_number().over(orden)).filter(F.col("_rn") == 1).drop("_rn")
 despues_dedup = df.count()
 print(f"Duplicados eliminados: {antes_dedup - despues_dedup}")
 
@@ -104,9 +125,9 @@ con_lang      = clean.filter(F.col("Language").isNotNull()).count()
 
 print(f"\n{'='*60}")
 print(f"TOTAL FILAS LIMPIAS:     {total}")
-print(f"  Con Description:       {con_desc}  ({100*con_desc/total:.1f}%)")
-print(f"  Con Publisher:         {con_publisher}  ({100*con_publisher/total:.1f}%)")
-print(f"  Con Language:          {con_lang}  ({100*con_lang/total:.1f}%)")
+print(f"  Con Description:       {con_desc}  ({100*con_desc/total if total else 0:.1f}%)")
+print(f"  Con Publisher:         {con_publisher}  ({100*con_publisher/total if total else 0:.1f}%)")
+print(f"  Con Language:          {con_lang}  ({100*con_lang/total if total else 0:.1f}%)")
 print(f"Escrito en:              {OUTPUT}")
 print(f"{'='*60}")
 

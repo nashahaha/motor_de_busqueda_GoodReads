@@ -1,4 +1,3 @@
-GNU nano 8.4                                           muestra.py
 # Muestra de desarrollo: limita raw_union a N filas
 # Ejecutar: spark-submit muestra.py [N]   (por defecto 5000)
 
@@ -7,6 +6,9 @@ from pyspark.sql import SparkSession
 
 if __name__ == "__main__":
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 5000
+    # CAMBIO: evitar tomar una muestra vacía o de tamaño negativo.
+    if n <= 0:
+        raise SystemExit("N debe ser mayor que 0")
     spark = SparkSession.builder.appName("grupo8_muestra").getOrCreate()
     spark.sparkContext.setLogLevel("ERROR")
 
@@ -18,3 +20,5 @@ if __name__ == "__main__":
     muestra.write.mode("overwrite").parquet("hdfs:///uhadoop2026/grupo8/sample_books")
     print("MUESTRA escrita en hdfs:///uhadoop2026/grupo8/sample_books (", n, "filas )")
     muestra.show(5, truncate=40)
+    # CAMBIO: cerrar Spark después de escribir la muestra.
+    spark.stop()
