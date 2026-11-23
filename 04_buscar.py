@@ -10,7 +10,7 @@
 #   python 04_buscar.py "superación personal" --min-rating 4.0 --size 20
 #   python 04_buscar.py                                   # modo interactivo
 #
-# Requisito: pip install elasticsearch
+# Requisito: pip install "elasticsearch>=6,<7"  # cliente compatible con ES 6.8
 # =============================================================================
 
 import argparse
@@ -31,8 +31,10 @@ Ejemplos:
 """,
 )
 parser.add_argument("query",       nargs="?", default=None, help="Texto a buscar")
-parser.add_argument("--es-host",   default="localhost:9200", help="Host:puerto de ES")
-parser.add_argument("--index",     default="goodreads_books", help="Nombre del índice")
+# CAMBIO: usar el host del clúster indicado en el Laboratorio 7.
+parser.add_argument("--es-host",   default="cm:9200", help="Host:puerto de ES")
+# CAMBIO: mantener el índice del grupo consistente con 03_indexar.py.
+parser.add_argument("--index",     default="grupo8_goodreads_books", help="Nombre del índice")
 parser.add_argument("--lang",      default=None, help="Filtrar por idioma (ej: eng, spa)")
 parser.add_argument("--min-year",  type=int, default=None, help="Año mínimo de publicación")
 parser.add_argument("--max-year",  type=int, default=None, help="Año máximo de publicación")
@@ -40,6 +42,9 @@ parser.add_argument("--min-rating",type=float, default=None, help="Rating mínim
 parser.add_argument("--size",      type=int, default=10, help="Número de resultados")
 parser.add_argument("--debug",     action="store_true", help="Mostrar query JSON enviada")
 args = parser.parse_args()
+# CAMBIO: evitar consultas con tamaño inválido o excesivo en el clúster compartido.
+if not 1 <= args.size <= 100:
+    parser.error("--size debe estar entre 1 y 100")
 
 
 def build_query(text, lang=None, min_year=None, max_year=None,
@@ -70,15 +75,17 @@ def build_query(text, lang=None, min_year=None, max_year=None,
     # --- Filtros opcionales ---------------------------------------------------
     filters = []
     if lang:
-        filters.append({"term": {"Language": lang}})
-    if min_year or max_year:
+        # CAMBIO: los códigos keyword se guardan en minúsculas en 02_limpiar.py.
+        filters.append({"term": {"Language": lang.strip().lower()}})
+    if min_year is not None or max_year is not None:
         year_range = {}
-        if min_year:
+        if min_year is not None:
             year_range["gte"] = min_year
-        if max_year:
+        if max_year is not None:
             year_range["lte"] = max_year
         filters.append({"range": {"PublishYear": year_range}})
-    if min_rating:
+    # CAMBIO: 0.0 es un valor válido y no debe interpretarse como ausencia de filtro.
+    if min_rating is not None:
         filters.append({"range": {"Rating": {"gte": min_rating}}})
 
     # --- Combinar multi_match con filtros en bool query -----------------------
@@ -104,22 +111,27 @@ def build_query(text, lang=None, min_year=None, max_year=None,
                         "field_value_factor": {
                             "field":    "Rating",
                             "factor":   1.2,
-                            "modifier": "log1p",
-                            "missing":  1,
-                        }
+                            # CAMBIO: ln2p es positivo incluso si Rating es 0.
+                            "modifier": "ln2p",
+                            "missing":  0,
+                        },
+                        "weight": 0.15,  # CAMBIO: mantener el rating secundario al texto.
                     },
                     {
                         # Libros con más reseñas suben (popularidad)
                         "field_value_factor": {
                             "field":    "CountsOfReview",
                             "factor":   0.5,
-                            "modifier": "log1p",
-                            "missing":  1,
-                        }
+                            # CAMBIO: 0 reseñas no puede anular la relevancia textual.
+                            "modifier": "ln2p",
+                            "missing":  0,
+                        },
+                        "weight": 0.05,
                     },
                 ],
-                "score_mode":   "multiply",
-                "boost_mode":   "multiply",
+                # CAMBIO: sumar factores evita que un valor cero borre el score de texto.
+                "score_mode":   "sum",
+                "boost_mode":   "sum",
             }
         },
         # Highlight: resaltar coincidencias en los campos textuales
@@ -135,6 +147,7 @@ def build_query(text, lang=None, min_year=None, max_year=None,
         },
         # Campos a devolver
         "_source": [
+            "Id",  # CAMBIO: exponer el identificador para rastrear los resultados.
             "Name", "Authors", "Rating", "PublishYear",
             "Language", "Publisher", "CountsOfReview",
             "pagesNumber", "Description",
@@ -188,7 +201,8 @@ def print_results(response, query_text):
         pages   = src.get("pagesNumber")
 
         # Encabezado del resultado
-        rating_str = f"{'★' * int(rating)}{'☆' * (5 - int(rating))} {rating:.2f}" if rating else "Sin rating"
+        # CAMBIO: 0.0 es un rating válido; no equivale a un valor ausente.
+        rating_str = f"{'★' * int(rating)}{'☆' * (5 - int(rating))} {rating:.2f}" if rating is not None else "Sin rating"
         year_str   = str(year) if year else "?"
         pages_str  = f"{pages} págs." if pages else ""
 
@@ -247,21 +261,26 @@ def interactive_mode(es, index, size):
         lang = min_year = max_year = min_rating = None
         tokens = raw.split()
         query_tokens = []
-        for t in tokens:
-            if t.startswith("lang:"):
-                lang = t.split(":", 1)[1]
-            elif t.startswith("year:"):
-                yr = t.split(":", 1)[1]
-                if "-" in yr:
-                    parts = yr.split("-")
-                    min_year = int(parts[0]) if parts[0] else None
-                    max_year = int(parts[1]) if parts[1] else None
+        # CAMBIO: filtros mal escritos no deben cerrar la interfaz interactiva.
+        try:
+            for t in tokens:
+                if t.startswith("lang:"):
+                    lang = t.split(":", 1)[1]
+                elif t.startswith("year:"):
+                    yr = t.split(":", 1)[1]
+                    if "-" in yr:
+                        parts = yr.split("-")
+                        min_year = int(parts[0]) if parts[0] else None
+                        max_year = int(parts[1]) if parts[1] else None
+                    else:
+                        min_year = max_year = int(yr)
+                elif t.startswith("rating:"):
+                    min_rating = float(t.split(":", 1)[1])
                 else:
-                    min_year = max_year = int(yr)
-            elif t.startswith("rating:"):
-                min_rating = float(t.split(":", 1)[1])
-            else:
-                query_tokens.append(t)
+                    query_tokens.append(t)
+        except ValueError:
+            print("  Filtro inválido: revisa year:AAAA-AAAA o rating:N.N")
+            continue
 
         query_text = " ".join(query_tokens)
         if not query_text:

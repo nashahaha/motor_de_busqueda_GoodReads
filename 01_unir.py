@@ -1,7 +1,7 @@
 # =============================================================================
 # 01_unir.py — Unión de TODOS los archivos book*.csv
 # Incluye archivos sin columna Description (la agrega como null).
-# Ejecutar:  spark-submit 01_unir.py 2>/dev/null
+# Ejecutar:  spark-submit --master spark://cluster-01:7077 01_unir.py
 # =============================================================================
 
 import subprocess
@@ -28,9 +28,13 @@ out = subprocess.check_output(
 files = sorted(
     l.split()[-1]
     for l in out.splitlines()
-    if "/book" in l and l.endswith(".csv")
+    # CAMBIO: filtrar por nombre de archivo, no por coincidencias en la ruta HDFS.
+    if l.split()[-1].rsplit("/", 1)[-1].startswith("book") and l.endswith(".csv")
 )
 print(f"Archivos encontrados: {len(files)}")
+# CAMBIO: evitar intentar escribir un DataFrame inexistente cuando faltan CSV.
+if not files:
+    raise SystemExit("No se encontraron archivos book*.csv en /uhadoop2026/grupo8/")
 
 # --- Leer y unir --------------------------------------------------------------
 union = None
@@ -67,7 +71,8 @@ total = u.count()
 con_desc = u.filter(col("Description").isNotNull()).count()
 print(f"\n{'='*60}")
 print(f"TOTAL FILAS:          {total}")
-print(f"Con Description:      {con_desc}  ({100*con_desc/total:.1f}%)")
+# CAMBIO: evitar dividir por cero si la unión no contiene registros.
+print(f"Con Description:      {con_desc}  ({100*con_desc/total if total else 0:.1f}%)")
 print(f"Sin Description:      {total - con_desc}")
 print(f"Escrito en:           {OUTPUT}")
 print(f"{'='*60}")
