@@ -1,3 +1,10 @@
+## Grupo
+
+Grupo 8
+- Benjamín Brito
+- Ignacia Galaz Alvarado
+- Pablo Osorio
+  
 # Motor de Búsqueda Semántica de Libros — Goodreads
 
 Motor de búsqueda sobre Elasticsearch que permite recuperar libros por
@@ -159,6 +166,4 @@ Se usa `fuzziness: AUTO` para tolerar errores tipográficos (ej:
 | `RatingDist1..5`  | integer   | Distribución de calificaciones             |
 | `RatingDistTotal` | integer   | Total de calificaciones                    |
 
-## Grupo
 
-Grupo 8
